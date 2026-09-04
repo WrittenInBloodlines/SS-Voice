@@ -23,10 +23,10 @@ class MainActivity : Activity() {
         status = findViewById(R.id.status)
 
         try {
-            val modelDir = copyAssetFolder("vits-piper-de_DE-thorsten-medium")
+            val modelDir = copyAssetFolder("vits-piper-en_US-ryan-medium")
             val config = getOfflineTtsConfig(
                 modelDir = modelDir,
-                modelName = "de_DE-thorsten-medium.onnx",
+                modelName = "en_US-ryan-medium.onnx",
                 acousticModelName = "",
                 vocoder = "",
                 voices = "",
@@ -38,7 +38,7 @@ class MainActivity : Activity() {
                 numThreads = 2
             )
             tts = OfflineTts(config = config)
-            status.text = "Ready • Piper • Thorsten Medium • Offline"
+            status.text = "Ready • Piper • Ryan Medium • English • Offline"
         } catch (e: Exception) {
             status.text = "Piper failed: ${e.message ?: "unknown error"}"
         }
@@ -52,7 +52,7 @@ class MainActivity : Activity() {
         val input = text.text.toString().trim()
         if (input.isEmpty()) return
 
-        status.text = "Generating • Piper • Offline"
+        status.text = "Generating • Piper • English • Offline"
         Thread {
             try {
                 val audio = tts.generate(input, sid = 0, speed = 1.0f)
@@ -64,7 +64,7 @@ class MainActivity : Activity() {
                         setDataSource(file.absolutePath)
                         prepare()
                         start()
-                        setOnCompletionListener { status.text = "Ready • Piper • Offline" }
+                        setOnCompletionListener { status.text = "Ready • Piper • Ryan Medium • English • Offline" }
                     }
                 }
             } catch (e: Exception) {
@@ -77,7 +77,7 @@ class MainActivity : Activity() {
         player?.stop()
         player?.release()
         player = null
-        if (::tts.isInitialized) status.text = "Ready • Piper • Offline"
+        if (::tts.isInitialized) status.text = "Ready • Piper • Ryan Medium • English • Offline"
     }
 
     private fun copyAssetFolder(path: String): String {
