@@ -18,6 +18,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Download Sherpa-ONNX Android AAR
+        run: |
+          mkdir -p app/libs
+          curl -L --fail --retry 3 \
+            -o app/libs/sherpa-onnx-1.13.7.aar \
+            https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.7/sherpa-onnx-1.13.7.aar
+
       - name: Download Piper model
         run: |
           mkdir -p app/src/main/assets
