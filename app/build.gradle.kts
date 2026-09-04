@@ -26,5 +26,5 @@ android {
 }
 
 dependencies {
-    implementation("com.k2fsa.sherpa.onnx:sherpa-onnx-android:1.10.30")
+    implementation(files("libs/sherpa-onnx-1.13.7.aar"))
 }
