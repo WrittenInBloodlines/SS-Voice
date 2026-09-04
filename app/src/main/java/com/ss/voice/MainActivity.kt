@@ -9,12 +9,18 @@ import android.widget.TextView
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.getOfflineTtsConfig
 import java.io.File
+import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
     private lateinit var tts: OfflineTts
     private lateinit var text: EditText
     private lateinit var status: TextView
     private var player: MediaPlayer? = null
+    private val executor = Executors.newSingleThreadExecutor()
+    private val audioQueue = mutableListOf<File>()
+    private var queueIndex = 0
+
+    data class DialogueLine(val speaker: String, val text: String)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,36 +53,117 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.stopButton).setOnClickListener { stop() }
     }
 
+    private fun parseDialogue(input: String): List<DialogueLine> {
+        val result = mutableListOf<DialogueLine>()
+        var currentSpeaker: String? = null
+        val currentText = StringBuilder()
+
+        fun flush() {
+            val value = currentText.toString().trim()
+            if (value.isNotEmpty()) {
+                result += DialogueLine(currentSpeaker ?: "Narrator", cleanText(value))
+            }
+            currentText.clear()
+        }
+
+        for (rawLine in input.lines()) {
+            val line = rawLine.trim()
+            if (line.isEmpty()) {
+                flush()
+                currentSpeaker = null
+                continue
+            }
+
+            val match = Regex("^([A-Za-z0-9•._ -]{1,40}):\\s*(.*)$").matchEntire(line)
+            if (match != null) {
+                flush()
+                currentSpeaker = match.groupValues[1].trim()
+                currentText.append(match.groupValues[2])
+            } else {
+                if (currentText.isNotEmpty()) currentText.append(' ')
+                currentText.append(line)
+            }
+        }
+        flush()
+        return result
+    }
+
+    private fun cleanText(value: String): String {
+        return value.trim().removeSurrounding("\"").removeSurrounding("“", "”")
+    }
+
     private fun speak() {
         if (!::tts.isInitialized) return
         val input = text.text.toString().trim()
         if (input.isEmpty()) return
 
-        status.text = "Generating • Piper • English • Offline"
-        Thread {
+        stop()
+        audioQueue.clear()
+        queueIndex = 0
+
+        val dialogue = parseDialogue(input)
+        if (dialogue.isEmpty()) return
+
+        val speakers = dialogue.map { it.speaker }.distinct()
+        status.text = "Parsing • ${speakers.size} speaker(s) • ${speakers.joinToString(", ")}" 
+
+        executor.execute {
             try {
-                val audio = tts.generate(input, sid = 0, speed = 1.0f)
-                val file = File(filesDir, "preview.wav")
-                audio.save(file.absolutePath)
-                runOnUiThread {
-                    player?.release()
-                    player = MediaPlayer().apply {
-                        setDataSource(file.absolutePath)
-                        prepare()
-                        start()
-                        setOnCompletionListener { status.text = "Ready • Piper • Ryan Medium • English • Offline" }
+                dialogue.forEachIndexed { index, line ->
+                    runOnUiThread {
+                        status.text = "Generating ${index + 1}/${dialogue.size} • ${line.speaker}"
                     }
+
+                    // Phase 2: every detected speaker is routed independently.
+                    // For now all speakers use the bundled Ryan voice. Later, this
+                    // map will connect each character to its own Voice Profile.
+                    val audio = tts.generate(line.text, sid = 0, speed = 1.0f)
+                    val file = File(filesDir, "dialogue_${index}_${System.nanoTime()}.wav")
+                    audio.save(file.absolutePath)
+                    synchronized(audioQueue) { audioQueue += file }
+                }
+
+                runOnUiThread {
+                    status.text = "Ready • ${dialogue.size} lines • ${speakers.size} speaker(s) detected"
+                    playNext()
                 }
             } catch (e: Exception) {
-                runOnUiThread { status.text = "Generation failed: ${e.message ?: "unknown error"}" }
+                runOnUiThread {
+                    status.text = "Generation failed: ${e.message ?: "unknown error"}"
+                }
             }
-        }.start()
+        }
+    }
+
+    private fun playNext() {
+        val file = synchronized(audioQueue) {
+            if (queueIndex < audioQueue.size) audioQueue[queueIndex] else null
+        }
+
+        if (file == null) {
+            status.text = "Ready • Piper • Ryan Medium • English • Offline"
+            return
+        }
+
+        player?.release()
+        player = MediaPlayer().apply {
+            setDataSource(file.absolutePath)
+            prepare()
+            setOnCompletionListener {
+                queueIndex++
+                it.release()
+                player = null
+                playNext()
+            }
+            start()
+        }
     }
 
     private fun stop() {
         player?.stop()
         player?.release()
         player = null
+        queueIndex = 0
         if (::tts.isInitialized) status.text = "Ready • Piper • Ryan Medium • English • Offline"
     }
 
@@ -106,6 +193,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         player?.release()
+        executor.shutdownNow()
         if (::tts.isInitialized) tts.release()
         super.onDestroy()
     }
