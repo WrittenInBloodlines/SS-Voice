@@ -11,6 +11,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://k2-fsa.github.io/sherpa/maven-repo/") }
     }
 }
 
