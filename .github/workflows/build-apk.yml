@@ -29,9 +29,9 @@ jobs:
         run: |
           mkdir -p app/src/main/assets
           curl -L --fail --retry 3 \
-            -o /tmp/thorsten.tar.bz2 \
-            https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-de_DE-thorsten-medium.tar.bz2
-          tar -xjf /tmp/thorsten.tar.bz2 -C app/src/main/assets
+            -o /tmp/ryan.tar.bz2 \
+            https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.tar.bz2
+          tar -xjf /tmp/ryan.tar.bz2 -C app/src/main/assets
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
