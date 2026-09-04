@@ -28,10 +28,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     override fun onInit(result: Int) {
         if (result == TextToSpeech.SUCCESS) {
-            tts.language = Locale.GERMAN
-            status.text = "Bereit • Android TTS"
+            tts.language = Locale.US
+            status.text = "Ready • Android TTS • English"
         } else {
-            status.text = "TTS konnte nicht gestartet werden"
+            status.text = "TTS could not be started"
         }
     }
 
