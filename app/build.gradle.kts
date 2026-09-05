@@ -15,6 +15,10 @@ android {
         versionName = "0.2.0"
     }
 
+    androidResources {
+        noCompress += "onnx"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
