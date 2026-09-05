@@ -46,33 +46,30 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="20dp"
             android:text="Voice Library"
             android:textSize="20sp"
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/voiceLibraryStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Lokale Stimmen, die direkt auf dem Gerät verfügbar sind." />
+            android:text="3 Stimmen installiert • Offline verfügbar" />
 
-        <Spinner
-            android:id="@+id/voiceSpinner"
+        <LinearLayout
+            android:id="@+id/voiceLibraryContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" />
-
-        <Button
-            android:id="@+id/testVoiceButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="▶ Stimme testen" />
+            android:layout_marginTop="10dp"
+            android:orientation="vertical" />
 
         <Button
             android:id="@+id/saveProfileButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:text="Profil speichern" />
 
         <TextView
@@ -88,18 +85,8 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Speed" />
-
-            <TextView
-                android:id="@+id/speedValue"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="1.00x" />
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Speed" />
+            <TextView android:id="@+id/speedValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.00x" />
         </LinearLayout>
 
         <SeekBar
@@ -114,18 +101,8 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Pitch" />
-
-            <TextView
-                android:id="@+id/pitchValue"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="1.00x" />
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Pitch" />
+            <TextView android:id="@+id/pitchValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.00x" />
         </LinearLayout>
 
         <SeekBar
@@ -140,18 +117,8 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Volume" />
-
-            <TextView
-                android:id="@+id/volumeValue"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="100%" />
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Volume" />
+            <TextView android:id="@+id/volumeValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="100%" />
         </LinearLayout>
 
         <SeekBar
