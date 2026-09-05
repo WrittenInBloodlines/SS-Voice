@@ -12,7 +12,9 @@ import java.io.File
 import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
-    private lateinit var tts: OfflineTts
+    private lateinit var narratorTts: OfflineTts
+    private lateinit var alexTts: OfflineTts
+    private lateinit var ciroTts: OfflineTts
     private lateinit var text: EditText
     private lateinit var status: TextView
     private var player: MediaPlayer? = null
@@ -29,28 +31,38 @@ class MainActivity : Activity() {
         status = findViewById(R.id.status)
 
         try {
-            val modelDir = copyAssetFolder("vits-piper-en_US-ryan-medium")
-            val config = getOfflineTtsConfig(
-                modelDir = modelDir,
-                modelName = "en_US-ryan-medium.onnx",
-                acousticModelName = "",
-                vocoder = "",
-                voices = "",
-                lexicon = "",
-                dataDir = "$modelDir/espeak-ng-data",
-                dictDir = "",
-                ruleFsts = "",
-                ruleFars = "",
-                numThreads = 2
-            )
-            tts = OfflineTts(config = config)
-            status.text = "Ready • Piper • Ryan Medium • English • Offline"
+            val narratorDir = copyAssetFolder("vits-piper-en_US-ryan-medium")
+            val alexDir = copyAssetFolder("vits-piper-en_US-lessac-medium")
+            val ciroDir = copyAssetFolder("vits-piper-en_US-amy-medium")
+
+            narratorTts = createTts(narratorDir, "en_US-ryan-medium.onnx")
+            alexTts = createTts(alexDir, "en_US-lessac-medium.onnx")
+            ciroTts = createTts(ciroDir, "en_US-amy-medium.onnx")
+
+            status.text = "Ready • 3 local voices • English • Offline"
         } catch (e: Exception) {
             status.text = "Piper failed: ${e.message ?: "unknown error"}"
         }
 
         findViewById<Button>(R.id.speakButton).setOnClickListener { speak() }
         findViewById<Button>(R.id.stopButton).setOnClickListener { stop() }
+    }
+
+    private fun createTts(modelDir: String, modelName: String): OfflineTts {
+        val config = getOfflineTtsConfig(
+            modelDir = modelDir,
+            modelName = modelName,
+            acousticModelName = "",
+            vocoder = "",
+            voices = "",
+            lexicon = "",
+            dataDir = "$modelDir/espeak-ng-data",
+            dictDir = "",
+            ruleFsts = "",
+            ruleFars = "",
+            numThreads = 2
+        )
+        return OfflineTts(config = config)
     }
 
     private fun parseDialogue(input: String): List<DialogueLine> {
@@ -92,8 +104,16 @@ class MainActivity : Activity() {
         return value.trim().removeSurrounding("\"").removeSurrounding("“", "”")
     }
 
+    private fun voiceForSpeaker(speaker: String): OfflineTts {
+        return when (speaker.trim().lowercase()) {
+            "alex", "ethyalexia", "ethyalexia eztliquies" -> alexTts
+            "ciro", "cyrus", "cyrus d'amantino", "cyrus d’amantino" -> ciroTts
+            else -> narratorTts
+        }
+    }
+
     private fun speak() {
-        if (!::tts.isInitialized) return
+        if (!::narratorTts.isInitialized || !::alexTts.isInitialized || !::ciroTts.isInitialized) return
         val input = text.text.toString().trim()
         if (input.isEmpty()) return
 
@@ -105,7 +125,7 @@ class MainActivity : Activity() {
         if (dialogue.isEmpty()) return
 
         val speakers = dialogue.map { it.speaker }.distinct()
-        status.text = "Parsing • ${speakers.size} speaker(s) • ${speakers.joinToString(", ")}" 
+        status.text = "Parsing • ${speakers.size} speaker(s) • ${speakers.joinToString(", ")}"
 
         executor.execute {
             try {
@@ -114,10 +134,8 @@ class MainActivity : Activity() {
                         status.text = "Generating ${index + 1}/${dialogue.size} • ${line.speaker}"
                     }
 
-                    // Phase 2: every detected speaker is routed independently.
-                    // For now all speakers use the bundled Ryan voice. Later, this
-                    // map will connect each character to its own Voice Profile.
-                    val audio = tts.generate(line.text, sid = 0, speed = 1.0f)
+                    val selectedVoice = voiceForSpeaker(line.speaker)
+                    val audio = selectedVoice.generate(line.text, sid = 0, speed = 1.0f)
                     val file = File(filesDir, "dialogue_${index}_${System.nanoTime()}.wav")
                     audio.save(file.absolutePath)
                     synchronized(audioQueue) { audioQueue += file }
@@ -141,7 +159,7 @@ class MainActivity : Activity() {
         }
 
         if (file == null) {
-            status.text = "Ready • Piper • Ryan Medium • English • Offline"
+            status.text = "Ready • 3 local voices • English • Offline"
             return
         }
 
@@ -164,7 +182,7 @@ class MainActivity : Activity() {
         player?.release()
         player = null
         queueIndex = 0
-        if (::tts.isInitialized) status.text = "Ready • Piper • Ryan Medium • English • Offline"
+        if (::narratorTts.isInitialized) status.text = "Ready • 3 local voices • English • Offline"
     }
 
     private fun copyAssetFolder(path: String): String {
@@ -194,7 +212,9 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         player?.release()
         executor.shutdownNow()
-        if (::tts.isInitialized) tts.release()
+        if (::narratorTts.isInitialized) narratorTts.release()
+        if (::alexTts.isInitialized) alexTts.release()
+        if (::ciroTts.isInitialized) ciroTts.release()
         super.onDestroy()
     }
 }
