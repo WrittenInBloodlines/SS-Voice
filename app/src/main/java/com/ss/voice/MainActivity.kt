@@ -1,11 +1,15 @@
 package com.ss.voice
 
 import android.app.Activity
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.os.Bundle
+import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
@@ -16,6 +20,7 @@ import android.widget.TextView
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.getOfflineTtsConfig
 import java.io.File
+import java.util.Locale
 import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
@@ -32,6 +37,8 @@ class MainActivity : Activity() {
     private lateinit var volumeBar: SeekBar
     private lateinit var profileSpinner: Spinner
     private lateinit var voiceLibraryContainer: LinearLayout
+    private lateinit var timelineContainer: LinearLayout
+    private lateinit var timelineStatus: TextView
     private lateinit var saveProfileButton: Button
     private var player: MediaPlayer? = null
     private val executor = Executors.newSingleThreadExecutor()
@@ -55,7 +62,7 @@ class MainActivity : Activity() {
 
     data class DialogueLine(val speaker: String, val text: String)
     data class VoiceSettings(val speed: Float, val pitch: Float, val volume: Float)
-    data class AudioItem(val file: File, val settings: VoiceSettings, val speaker: String)
+    data class AudioItem(val file: File, val settings: VoiceSettings, val speaker: String, val text: String, val durationMs: Long)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,11 +77,14 @@ class MainActivity : Activity() {
         volumeValue = findViewById(R.id.volumeValue)
         profileSpinner = findViewById(R.id.profileSpinner)
         voiceLibraryContainer = findViewById(R.id.voiceLibraryContainer)
+        timelineContainer = findViewById(R.id.timelineContainer)
+        timelineStatus = findViewById(R.id.timelineStatus)
         saveProfileButton = findViewById(R.id.saveProfileButton)
 
         setupControls()
         setupProfiles()
         setupVoiceLibrary()
+        clearTimeline()
 
         try {
             val narratorDir = copyAssetFolder("vits-piper-en_US-ryan-medium")
@@ -97,12 +107,12 @@ class MainActivity : Activity() {
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, profileNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         profileSpinner.adapter = adapter
-        profileSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+        profileSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 selectedProfile = profileNames[position]
                 loadProfile(selectedProfile)
             }
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
     }
 
@@ -124,7 +134,7 @@ class MainActivity : Activity() {
             val title = TextView(this).apply {
                 text = voiceLabels[key] ?: key
                 textSize = 18f
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTypeface(typeface, Typeface.BOLD)
             }
             val info = TextView(this).apply {
                 text = voiceDescriptions[key] ?: "English • Local voice"
@@ -165,8 +175,8 @@ class MainActivity : Activity() {
     }
 
     private fun updateControlLabels() {
-        speedValue.text = String.format("%.2fx", speed)
-        pitchValue.text = String.format("%.2fx", pitch)
+        speedValue.text = String.format(Locale.US, "%.2fx", speed)
+        pitchValue.text = String.format(Locale.US, "%.2fx", pitch)
         volumeValue.text = "${(volume * 100).toInt()}%"
     }
 
@@ -262,10 +272,20 @@ class MainActivity : Activity() {
         }
         for (rawLine in input.lines()) {
             val line = rawLine.trim()
-            if (line.isEmpty()) { flush(); currentSpeaker = null; continue }
+            if (line.isEmpty()) {
+                flush()
+                currentSpeaker = null
+                continue
+            }
             val match = Regex("^([A-Za-z0-9•._ -]{1,40}):\\s*(.*)$").matchEntire(line)
-            if (match != null) { flush(); currentSpeaker = match.groupValues[1].trim(); currentText.append(match.groupValues[2]) }
-            else { if (currentText.isNotEmpty()) currentText.append(' '); currentText.append(line) }
+            if (match != null) {
+                flush()
+                currentSpeaker = match.groupValues[1].trim()
+                currentText.append(match.groupValues[2])
+            } else {
+                if (currentText.isNotEmpty()) currentText.append(' ')
+                currentText.append(line)
+            }
         }
         flush()
         return result
@@ -280,10 +300,12 @@ class MainActivity : Activity() {
         stop()
         audioQueue.clear()
         queueIndex = 0
+        clearTimeline()
         val dialogue = parseDialogue(input)
         if (dialogue.isEmpty()) return
         val speakers = dialogue.map { it.speaker }.distinct()
         status.text = "Parsing • ${speakers.size} speaker(s) • ${speakers.joinToString(", ")}"
+        timelineStatus.text = "Generiere Sprecher-Timeline..."
         executor.execute {
             try {
                 dialogue.forEachIndexed { index, line ->
@@ -291,13 +313,127 @@ class MainActivity : Activity() {
                     val audio = voiceForKey(voiceKeyForSpeaker(line.speaker)).generate(line.text, sid = 0, speed = 1.0f)
                     val file = File(filesDir, "dialogue_${index}_${System.nanoTime()}.wav")
                     audio.save(file.absolutePath)
-                    synchronized(audioQueue) { audioQueue += AudioItem(file, settingsForSpeaker(line.speaker), line.speaker) }
+                    val duration = getAudioDuration(file)
+                    synchronized(audioQueue) {
+                        audioQueue += AudioItem(file, settingsForSpeaker(line.speaker), line.speaker, line.text, duration)
+                    }
                 }
-                runOnUiThread { status.text = "Ready • ${dialogue.size} lines • ${speakers.size} speaker(s) detected"; playNext() }
+                runOnUiThread {
+                    status.text = "Ready • ${dialogue.size} lines • ${speakers.size} speaker(s) detected"
+                    buildTimeline()
+                    playNext()
+                }
             } catch (e: Exception) {
-                runOnUiThread { status.text = "Generation failed: ${e.message ?: "unknown error"}" }
+                runOnUiThread {
+                    timelineStatus.text = "Timeline konnte nicht erstellt werden."
+                    status.text = "Generation failed: ${e.message ?: "unknown error"}"
+                }
             }
         }
+    }
+
+    private fun getAudioDuration(file: File): Long {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(file.absolutePath)
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+        } finally {
+            retriever.release()
+        }
+    }
+
+    private fun buildTimeline() {
+        timelineContainer.removeAllViews()
+        val items = synchronized(audioQueue) { audioQueue.toList() }
+        if (items.isEmpty()) {
+            timelineStatus.text = "Noch keine Szene analysiert."
+            return
+        }
+
+        var elapsed = 0L
+        items.forEachIndexed { index, item ->
+            val start = elapsed
+            elapsed += item.durationMs
+            val end = elapsed
+
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(18, 14, 18, 14)
+                background = GradientDrawable().apply {
+                    cornerRadius = 18f
+                    setStroke(1, 0xFFCCCCCC.toInt())
+                }
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { replayTimelineItem(index) }
+            }
+            val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            params.setMargins(0, 0, 0, 10)
+            card.layoutParams = params
+
+            val header = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+            val time = TextView(this).apply {
+                text = formatTime(start)
+                textSize = 13f
+            }
+            val speaker = TextView(this).apply {
+                text = "  ${item.speaker}"
+                textSize = 17f
+                setTypeface(typeface, Typeface.BOLD)
+            }
+            header.addView(time)
+            header.addView(speaker)
+
+            val preview = TextView(this).apply {
+                text = if (item.text.length > 110) item.text.take(110).trimEnd() + "…" else item.text
+                textSize = 15f
+                setPadding(0, 8, 0, 4)
+            }
+            val meta = TextView(this).apply {
+                text = "${formatTime(start)} – ${formatTime(end)} • Tippen zum Wiederholen"
+                textSize = 12f
+            }
+
+            card.addView(header)
+            card.addView(preview)
+            card.addView(meta)
+            timelineContainer.addView(card)
+        }
+
+        timelineStatus.text = "${items.size} Abschnitte • ${items.map { it.speaker }.distinct().size} Sprecher • ${formatTime(elapsed)}"
+    }
+
+    private fun replayTimelineItem(index: Int) {
+        val item = synchronized(audioQueue) { audioQueue.getOrNull(index) } ?: return
+        player?.stop()
+        player?.release()
+        player = null
+        playSingleItem(item, index, timelineReplay = true)
+    }
+
+    private fun playSingleItem(item: AudioItem, index: Int, timelineReplay: Boolean = false) {
+        player?.release()
+        player = MediaPlayer().apply {
+            setDataSource(item.file.absolutePath)
+            prepare()
+            setVolume(item.settings.volume, item.settings.volume)
+            setPlaybackParams(PlaybackParams().setSpeed(item.settings.speed).setPitch(item.settings.pitch))
+            setOnCompletionListener {
+                it.release()
+                player = null
+                if (timelineReplay) {
+                    status.text = "Ready • Timeline-Abschnitt wiedergegeben"
+                } else {
+                    queueIndex = index + 1
+                    playNext()
+                }
+            }
+            start()
+        }
+        status.text = if (timelineReplay) "Replay • ${item.speaker}" else "Playing • ${item.speaker}"
     }
 
     private fun testVoice(key: String) {
@@ -328,16 +464,11 @@ class MainActivity : Activity() {
 
     private fun playNext() {
         val item = synchronized(audioQueue) { if (queueIndex < audioQueue.size) audioQueue[queueIndex] else null }
-        if (item == null) { status.text = "Ready • 3 local voices • English • Offline"; return }
-        player?.release()
-        player = MediaPlayer().apply {
-            setDataSource(item.file.absolutePath)
-            prepare()
-            setVolume(item.settings.volume, item.settings.volume)
-            setPlaybackParams(PlaybackParams().setSpeed(item.settings.speed).setPitch(item.settings.pitch))
-            setOnCompletionListener { queueIndex++; it.release(); player = null; playNext() }
-            start()
+        if (item == null) {
+            status.text = "Ready • 3 local voices • English • Offline"
+            return
         }
+        playSingleItem(item, queueIndex)
     }
 
     private fun stop() {
@@ -346,6 +477,18 @@ class MainActivity : Activity() {
         player = null
         queueIndex = 0
         if (::narratorTts.isInitialized) status.text = "Ready • 3 local voices • English • Offline"
+    }
+
+    private fun clearTimeline() {
+        if (::timelineContainer.isInitialized) timelineContainer.removeAllViews()
+        if (::timelineStatus.isInitialized) timelineStatus.text = "Noch keine Szene analysiert."
+    }
+
+    private fun formatTime(ms: Long): String {
+        val totalSeconds = (ms / 1000L).coerceAtLeast(0L)
+        val minutes = totalSeconds / 60L
+        val seconds = totalSeconds % 60L
+        return String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 
     private fun copyAssetFolder(path: String): String {
@@ -359,19 +502,25 @@ class MainActivity : Activity() {
         val entries = assets.list(path) ?: return
         for (entry in entries) {
             val childPath = "$path/$entry"
-            val child = File(destination, entry)
-            val children = assets.list(childPath)
-            if (children != null && children.isNotEmpty()) { child.mkdirs(); copyAssetContents(childPath, child) }
-            else assets.open(childPath).use { input -> child.outputStream().use { output -> input.copyTo(output) } }
+            val childDestination = File(destination, entry)
+            if (assets.list(childPath)?.isNotEmpty() == true) {
+                if (!childDestination.exists()) childDestination.mkdirs()
+                copyAssetContents(childPath, childDestination)
+            } else if (!childDestination.exists()) {
+                assets.open(childPath).use { input ->
+                    childDestination.outputStream().use { output -> input.copyTo(output) }
+                }
+            }
         }
     }
 
     override fun onDestroy() {
+        super.onDestroy()
         player?.release()
-        executor.shutdownNow()
+        player = null
         if (::narratorTts.isInitialized) narratorTts.release()
         if (::alexTts.isInitialized) alexTts.release()
         if (::ciroTts.isInitialized) ciroTts.release()
-        super.onDestroy()
+        executor.shutdownNow()
     }
 }
