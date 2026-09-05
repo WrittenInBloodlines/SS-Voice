@@ -2,9 +2,11 @@ package com.ss.voice
 
 import android.app.Activity
 import android.media.MediaPlayer
+import android.media.PlaybackParams
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.SeekBar
 import android.widget.TextView
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.getOfflineTtsConfig
@@ -17,10 +19,19 @@ class MainActivity : Activity() {
     private lateinit var ciroTts: OfflineTts
     private lateinit var text: EditText
     private lateinit var status: TextView
+    private lateinit var speedValue: TextView
+    private lateinit var pitchValue: TextView
+    private lateinit var volumeValue: TextView
+    private lateinit var speedBar: SeekBar
+    private lateinit var pitchBar: SeekBar
+    private lateinit var volumeBar: SeekBar
     private var player: MediaPlayer? = null
     private val executor = Executors.newSingleThreadExecutor()
     private val audioQueue = mutableListOf<File>()
     private var queueIndex = 0
+    private var speed = 1.0f
+    private var pitch = 1.0f
+    private var volume = 1.0f
 
     data class DialogueLine(val speaker: String, val text: String)
 
@@ -29,6 +40,14 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
         text = findViewById(R.id.textInput)
         status = findViewById(R.id.status)
+        speedBar = findViewById(R.id.speedBar)
+        pitchBar = findViewById(R.id.pitchBar)
+        volumeBar = findViewById(R.id.volumeBar)
+        speedValue = findViewById(R.id.speedValue)
+        pitchValue = findViewById(R.id.pitchValue)
+        volumeValue = findViewById(R.id.volumeValue)
+
+        setupControls()
 
         try {
             val narratorDir = copyAssetFolder("vits-piper-en_US-ryan-medium")
@@ -46,6 +65,41 @@ class MainActivity : Activity() {
 
         findViewById<Button>(R.id.speakButton).setOnClickListener { speak() }
         findViewById<Button>(R.id.stopButton).setOnClickListener { stop() }
+    }
+
+    private fun setupControls() {
+        speedBar.progress = 50
+        pitchBar.progress = 50
+        volumeBar.progress = 100
+        updateControlLabels()
+
+        speedBar.setOnSeekBarChangeListener(simpleListener { progress ->
+            speed = 0.75f + progress / 100f
+            updateControlLabels()
+        })
+        pitchBar.setOnSeekBarChangeListener(simpleListener { progress ->
+            pitch = 0.75f + progress / 100f
+            updateControlLabels()
+        })
+        volumeBar.setOnSeekBarChangeListener(simpleListener { progress ->
+            volume = progress / 100f
+            updateControlLabels()
+            player?.setVolume(volume, volume)
+        })
+    }
+
+    private fun simpleListener(onProgress: (Int) -> Unit) = object : SeekBar.OnSeekBarChangeListener {
+        override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+            onProgress(progress)
+        }
+        override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+        override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+    }
+
+    private fun updateControlLabels() {
+        speedValue.text = String.format("%.2fx", speed)
+        pitchValue.text = String.format("%.2fx", pitch)
+        volumeValue.text = "${(volume * 100).toInt()}%"
     }
 
     private fun createTts(modelDir: String, modelName: String): OfflineTts {
@@ -167,6 +221,8 @@ class MainActivity : Activity() {
         player = MediaPlayer().apply {
             setDataSource(file.absolutePath)
             prepare()
+            setVolume(volume, volume)
+            setPlaybackParams(PlaybackParams().setSpeed(speed).setPitch(pitch))
             setOnCompletionListener {
                 queueIndex++
                 it.release()
