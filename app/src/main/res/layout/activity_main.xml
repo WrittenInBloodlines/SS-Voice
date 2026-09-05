@@ -128,27 +128,56 @@
             android:max="100"
             android:progress="100" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Speaker Timeline"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/timelineStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Noch keine Szene analysiert." />
+
+        <LinearLayout
+            android:id="@+id/timelineContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical" />
+
         <EditText
             android:id="@+id/textInput"
             android:layout_width="match_parent"
             android:layout_height="280dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="20dp"
             android:gravity="top|start"
             android:hint="Text eingeben..."
             android:inputType="textMultiLine"
             android:minLines="8" />
 
-        <Button
-            android:id="@+id/speakButton"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="▶ Sprechen" />
-
-        <Button
-            android:id="@+id/stopButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="■ Stop" />
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+            <Button
+                android:id="@+id/speakButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="▶ Sprechen" />
+            <Button
+                android:id="@+id/stopButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="■ Stop" />
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>
