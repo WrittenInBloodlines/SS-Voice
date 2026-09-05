@@ -28,7 +28,9 @@ class MainActivity : Activity() {
     private lateinit var pitchBar: SeekBar
     private lateinit var volumeBar: SeekBar
     private lateinit var profileSpinner: Spinner
+    private lateinit var voiceSpinner: Spinner
     private lateinit var saveProfileButton: Button
+    private lateinit var testVoiceButton: Button
     private var player: MediaPlayer? = null
     private val executor = Executors.newSingleThreadExecutor()
     private val audioQueue = mutableListOf<AudioItem>()
@@ -37,8 +39,20 @@ class MainActivity : Activity() {
     private var pitch = 1.0f
     private var volume = 1.0f
     private var selectedProfile = "Narrator"
+    private var selectedVoiceKey = "ryan"
 
     private val profileNames = listOf("Narrator", "Alex", "Ciro")
+    private val voiceNames = listOf(
+        "Ryan • English • Medium",
+        "Lessac • English • Medium",
+        "Amy • English • Medium"
+    )
+    private val voiceKeys = listOf("ryan", "lessac", "amy")
+    private val voiceLabels = mapOf(
+        "ryan" to "Ryan",
+        "lessac" to "Lessac",
+        "amy" to "Amy"
+    )
     private val preferences by lazy { getSharedPreferences("voice_profiles", MODE_PRIVATE) }
 
     data class DialogueLine(val speaker: String, val text: String)
@@ -57,10 +71,13 @@ class MainActivity : Activity() {
         pitchValue = findViewById(R.id.pitchValue)
         volumeValue = findViewById(R.id.volumeValue)
         profileSpinner = findViewById(R.id.profileSpinner)
+        voiceSpinner = findViewById(R.id.voiceSpinner)
         saveProfileButton = findViewById(R.id.saveProfileButton)
+        testVoiceButton = findViewById(R.id.testVoiceButton)
 
         setupControls()
         setupProfiles()
+        setupVoiceLibrary()
 
         try {
             val narratorDir = copyAssetFolder("vits-piper-en_US-ryan-medium")
@@ -79,6 +96,7 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.speakButton).setOnClickListener { speak() }
         findViewById<Button>(R.id.stopButton).setOnClickListener { stop() }
         saveProfileButton.setOnClickListener { saveCurrentProfile() }
+        testVoiceButton.setOnClickListener { testSelectedVoice() }
     }
 
     private fun setupProfiles() {
@@ -90,6 +108,20 @@ class MainActivity : Activity() {
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
                 selectedProfile = profileNames[position]
                 loadProfile(selectedProfile)
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+        }
+    }
+
+    private fun setupVoiceLibrary() {
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, voiceNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        voiceSpinner.adapter = adapter
+        voiceSpinner.setSelection(0)
+        voiceSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                selectedVoiceKey = voiceKeys[position]
             }
 
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
@@ -138,10 +170,21 @@ class MainActivity : Activity() {
         speed = preferences.getFloat("${key}_speed", 1.0f)
         pitch = preferences.getFloat("${key}_pitch", 1.0f)
         volume = preferences.getFloat("${key}_volume", 1.0f)
+        selectedVoiceKey = preferences.getString("${key}_voice", defaultVoiceForProfile(profile)) ?: defaultVoiceForProfile(profile)
+
         speedBar.progress = ((speed - 0.75f) * 100f).toInt().coerceIn(0, 100)
         pitchBar.progress = ((pitch - 0.75f) * 100f).toInt().coerceIn(0, 100)
         volumeBar.progress = (volume * 100f).toInt().coerceIn(0, 100)
+        voiceSpinner.setSelection(voiceKeys.indexOf(selectedVoiceKey).coerceAtLeast(0))
         updateControlLabels()
+    }
+
+    private fun defaultVoiceForProfile(profile: String): String {
+        return when (profile) {
+            "Alex" -> "lessac"
+            "Ciro" -> "amy"
+            else -> "ryan"
+        }
     }
 
     private fun saveCurrentProfile() {
@@ -150,8 +193,19 @@ class MainActivity : Activity() {
             .putFloat("${key}_speed", speed)
             .putFloat("${key}_pitch", pitch)
             .putFloat("${key}_volume", volume)
+            .putString("${key}_voice", selectedVoiceKey)
             .apply()
-        status.text = "Saved • $selectedProfile profile"
+        status.text = "Saved • $selectedProfile • ${voiceLabels[selectedVoiceKey] ?: selectedVoiceKey}"
+    }
+
+    private fun voiceKeyForSpeaker(speaker: String): String {
+        val profile = when (speaker.trim().lowercase()) {
+            "alex", "ethyalexia", "ethyalexia eztliquies" -> "Alex"
+            "ciro", "cyrus", "cyrus d'amantino", "cyrus d’amantino" -> "Ciro"
+            else -> "Narrator"
+        }
+        val key = profileKey(profile)
+        return preferences.getString("${key}_voice", defaultVoiceForProfile(profile)) ?: defaultVoiceForProfile(profile)
     }
 
     private fun settingsForSpeaker(speaker: String): VoiceSettings {
@@ -166,6 +220,14 @@ class MainActivity : Activity() {
             pitch = preferences.getFloat("${key}_pitch", 1.0f),
             volume = preferences.getFloat("${key}_volume", 1.0f)
         )
+    }
+
+    private fun voiceForKey(key: String): OfflineTts {
+        return when (key) {
+            "lessac" -> alexTts
+            "amy" -> ciroTts
+            else -> narratorTts
+        }
     }
 
     private fun createTts(modelDir: String, modelName: String): OfflineTts {
@@ -224,14 +286,6 @@ class MainActivity : Activity() {
         return value.trim().removeSurrounding("\"").removeSurrounding("“", "”")
     }
 
-    private fun voiceForSpeaker(speaker: String): OfflineTts {
-        return when (speaker.trim().lowercase()) {
-            "alex", "ethyalexia", "ethyalexia eztliquies" -> alexTts
-            "ciro", "cyrus", "cyrus d'amantino", "cyrus d’amantino" -> ciroTts
-            else -> narratorTts
-        }
-    }
-
     private fun speak() {
         if (!::narratorTts.isInitialized || !::alexTts.isInitialized || !::ciroTts.isInitialized) return
         val input = text.text.toString().trim()
@@ -254,7 +308,7 @@ class MainActivity : Activity() {
                         status.text = "Generating ${index + 1}/${dialogue.size} • ${line.speaker}"
                     }
 
-                    val selectedVoice = voiceForSpeaker(line.speaker)
+                    val selectedVoice = voiceForKey(voiceKeyForSpeaker(line.speaker))
                     val audio = selectedVoice.generate(line.text, sid = 0, speed = 1.0f)
                     val file = File(filesDir, "dialogue_${index}_${System.nanoTime()}.wav")
                     audio.save(file.absolutePath)
@@ -270,6 +324,37 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     status.text = "Generation failed: ${e.message ?: "unknown error"}"
                 }
+            }
+        }
+    }
+
+    private fun testSelectedVoice() {
+        if (!::narratorTts.isInitialized || !::alexTts.isInitialized || !::ciroTts.isInitialized) return
+        stop()
+        executor.execute {
+            try {
+                val tts = voiceForKey(selectedVoiceKey)
+                val audio = tts.generate("This is the selected S•S Voice.", sid = 0, speed = 1.0f)
+                val file = File(filesDir, "voice_test_${System.nanoTime()}.wav")
+                audio.save(file.absolutePath)
+                runOnUiThread {
+                    player?.release()
+                    player = MediaPlayer().apply {
+                        setDataSource(file.absolutePath)
+                        prepare()
+                        setVolume(volume, volume)
+                        setPlaybackParams(PlaybackParams().setSpeed(speed).setPitch(pitch))
+                        setOnCompletionListener {
+                            it.release()
+                            player = null
+                            status.text = "Ready • 3 local voices • English • Offline"
+                        }
+                        start()
+                    }
+                    status.text = "Testing • ${voiceLabels[selectedVoiceKey] ?: selectedVoiceKey}"
+                }
+            } catch (e: Exception) {
+                runOnUiThread { status.text = "Voice test failed: ${e.message ?: "unknown error"}" }
             }
         }
     }
