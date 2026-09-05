@@ -59,8 +59,8 @@ class MainActivity : Activity() {
         profileSpinner = findViewById(R.id.profileSpinner)
         saveProfileButton = findViewById(R.id.saveProfileButton)
 
-        setupProfiles()
         setupControls()
+        setupProfiles()
 
         try {
             val narratorDir = copyAssetFolder("vits-piper-en_US-ryan-medium")
@@ -227,7 +227,7 @@ class MainActivity : Activity() {
     private fun voiceForSpeaker(speaker: String): OfflineTts {
         return when (speaker.trim().lowercase()) {
             "alex", "ethyalexia", "ethyalexia eztliquies" -> alexTts
-            "ciro", "cyrus", "cyrus d'amantino", "cyrus d’ amantino" -> ciroTts
+            "ciro", "cyrus", "cyrus d'amantino", "cyrus d’amantino" -> ciroTts
             else -> narratorTts
         }
     }
