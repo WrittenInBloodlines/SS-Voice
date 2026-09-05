@@ -195,8 +195,8 @@
             android:id="@+id/paragraphPauseBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="200"
-            android:progress="100" />
+            android:max="2000"
+            android:progress="1000" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -210,8 +210,37 @@
             android:id="@+id/dramaticPauseBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="300"
-            android:progress="150" />
+            android:max="3000"
+            android:progress="1500" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Scene System"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/sceneStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="0 gespeicherte Szene(n)" />
+
+        <Button
+            android:id="@+id/saveSceneButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="＋ Szene speichern" />
+
+        <LinearLayout
+            android:id="@+id/sceneContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical" />
 
         <TextView
             android:layout_width="wrap_content"
