@@ -7,6 +7,8 @@ import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
@@ -16,6 +18,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.Spinner
+import android.widget.Switch
 import android.widget.TextView
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.getOfflineTtsConfig
@@ -40,8 +43,19 @@ class MainActivity : Activity() {
     private lateinit var timelineContainer: LinearLayout
     private lateinit var timelineStatus: TextView
     private lateinit var saveProfileButton: Button
+    private lateinit var audiobookModeSwitch: Switch
+    private lateinit var sentencePauseBar: SeekBar
+    private lateinit var speakerPauseBar: SeekBar
+    private lateinit var paragraphPauseBar: SeekBar
+    private lateinit var dramaticPauseBar: SeekBar
+    private lateinit var sentencePauseValue: TextView
+    private lateinit var speakerPauseValue: TextView
+    private lateinit var paragraphPauseValue: TextView
+    private lateinit var dramaticPauseValue: TextView
+
     private var player: MediaPlayer? = null
     private val executor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val audioQueue = mutableListOf<AudioItem>()
     private var queueIndex = 0
     private var speed = 1.0f
@@ -49,6 +63,12 @@ class MainActivity : Activity() {
     private var volume = 1.0f
     private var selectedProfile = "Narrator"
     private var selectedVoiceKey = "ryan"
+
+    private var audiobookMode = true
+    private var sentencePauseMs = 300L
+    private var speakerPauseMs = 500L
+    private var paragraphPauseMs = 1000L
+    private var dramaticPauseMs = 1500L
 
     private val profileNames = listOf("Narrator", "Alex", "Ciro")
     private val voiceKeys = listOf("ryan", "lessac", "amy")
@@ -60,9 +80,9 @@ class MainActivity : Activity() {
     )
     private val preferences by lazy { getSharedPreferences("voice_profiles", MODE_PRIVATE) }
 
-    data class DialogueLine(val speaker: String, val text: String)
+    data class DialogueLine(val speaker: String, val text: String, val paragraphBreakAfter: Boolean = false)
     data class VoiceSettings(val speed: Float, val pitch: Float, val volume: Float)
-    data class AudioItem(val file: File, val settings: VoiceSettings, val speaker: String, val text: String, val durationMs: Long)
+    data class AudioItem(val file: File, val settings: VoiceSettings, val speaker: String, val text: String, val durationMs: Long, val pauseAfterMs: Long)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,10 +100,20 @@ class MainActivity : Activity() {
         timelineContainer = findViewById(R.id.timelineContainer)
         timelineStatus = findViewById(R.id.timelineStatus)
         saveProfileButton = findViewById(R.id.saveProfileButton)
+        audiobookModeSwitch = findViewById(R.id.audiobookModeSwitch)
+        sentencePauseBar = findViewById(R.id.sentencePauseBar)
+        speakerPauseBar = findViewById(R.id.speakerPauseBar)
+        paragraphPauseBar = findViewById(R.id.paragraphPauseBar)
+        dramaticPauseBar = findViewById(R.id.dramaticPauseBar)
+        sentencePauseValue = findViewById(R.id.sentencePauseValue)
+        speakerPauseValue = findViewById(R.id.speakerPauseValue)
+        paragraphPauseValue = findViewById(R.id.paragraphPauseValue)
+        dramaticPauseValue = findViewById(R.id.dramaticPauseValue)
 
         setupControls()
         setupProfiles()
         setupVoiceLibrary()
+        setupAudiobookMode()
         clearTimeline()
 
         try {
@@ -130,30 +160,12 @@ class MainActivity : Activity() {
             val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             params.setMargins(0, 0, 0, 12)
             card.layoutParams = params
-
-            val title = TextView(this).apply {
-                text = voiceLabels[key] ?: key
-                textSize = 18f
-                setTypeface(typeface, Typeface.BOLD)
-            }
-            val info = TextView(this).apply {
-                text = voiceDescriptions[key] ?: "English • Local voice"
-                setPadding(0, 4, 0, 8)
-            }
+            val title = TextView(this).apply { text = voiceLabels[key] ?: key; textSize = 18f; setTypeface(typeface, Typeface.BOLD) }
+            val info = TextView(this).apply { text = voiceDescriptions[key] ?: "English • Local voice"; setPadding(0, 4, 0, 8) }
             val offline = TextView(this).apply { text = "● Installed • Offline" }
-            val test = Button(this).apply {
-                text = "▶ Test"
-                setOnClickListener { testVoice(key) }
-            }
-            val use = Button(this).apply {
-                text = "Als ${selectedProfile}-Stimme verwenden"
-                setOnClickListener { assignVoiceToCurrentProfile(key) }
-            }
-            card.addView(title)
-            card.addView(info)
-            card.addView(offline)
-            card.addView(test)
-            card.addView(use)
+            val test = Button(this).apply { text = "▶ Test"; setOnClickListener { testVoice(key) } }
+            val use = Button(this).apply { text = "Als ${selectedProfile}-Stimme verwenden"; setOnClickListener { assignVoiceToCurrentProfile(key) } }
+            card.addView(title); card.addView(info); card.addView(offline); card.addView(test); card.addView(use)
             voiceLibraryContainer.addView(card)
         }
     }
@@ -166,6 +178,57 @@ class MainActivity : Activity() {
         speedBar.setOnSeekBarChangeListener(simpleListener { progress -> speed = 0.75f + progress / 100f; updateControlLabels() })
         pitchBar.setOnSeekBarChangeListener(simpleListener { progress -> pitch = 0.75f + progress / 100f; updateControlLabels() })
         volumeBar.setOnSeekBarChangeListener(simpleListener { progress -> volume = progress / 100f; updateControlLabels(); player?.setVolume(volume, volume) })
+    }
+
+    private fun setupAudiobookMode() {
+        audiobookMode = preferences.getBoolean("audiobook_mode", true)
+        sentencePauseMs = preferences.getLong("sentence_pause_ms", 300L)
+        speakerPauseMs = preferences.getLong("speaker_pause_ms", 500L)
+        paragraphPauseMs = preferences.getLong("paragraph_pause_ms", 1000L)
+        dramaticPauseMs = preferences.getLong("dramatic_pause_ms", 1500L)
+        audiobookModeSwitch.isChecked = audiobookMode
+        sentencePauseBar.progress = (sentencePauseMs.toInt().coerceIn(0, 1000) / 10)
+        speakerPauseBar.progress = (speakerPauseMs.toInt().coerceIn(0, 1000) / 10)
+        paragraphPauseBar.progress = paragraphPauseMs.toInt().coerceIn(0, 2000)
+        dramaticPauseBar.progress = dramaticPauseMs.toInt().coerceIn(0, 3000)
+        updatePauseLabels()
+
+        audiobookModeSwitch.setOnCheckedChangeListener { _, checked ->
+            audiobookMode = checked
+            saveAudiobookSettings()
+            status.text = if (checked) "Hörspiel-Modus • automatische Pausen aktiv" else "Hörspiel-Modus • automatische Pausen aus"
+        }
+        sentencePauseBar.setOnSeekBarChangeListener(pauseListener { sentencePauseMs = it * 10L })
+        speakerPauseBar.setOnSeekBarChangeListener(pauseListener { speakerPauseMs = it * 10L })
+        paragraphPauseBar.setOnSeekBarChangeListener(pauseListener { paragraphPauseMs = it.toLong() })
+        dramaticPauseBar.setOnSeekBarChangeListener(pauseListener { dramaticPauseMs = it.toLong() })
+    }
+
+    private fun pauseListener(update: (Int) -> Unit) = object : SeekBar.OnSeekBarChangeListener {
+        override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+            update(progress)
+            updatePauseLabels()
+            if (fromUser) saveAudiobookSettings()
+        }
+        override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+        override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+    }
+
+    private fun updatePauseLabels() {
+        sentencePauseValue.text = String.format(Locale.US, "%.2fs", sentencePauseMs / 1000f)
+        speakerPauseValue.text = String.format(Locale.US, "%.2fs", speakerPauseMs / 1000f)
+        paragraphPauseValue.text = String.format(Locale.US, "%.2fs", paragraphPauseMs / 1000f)
+        dramaticPauseValue.text = String.format(Locale.US, "%.2fs", dramaticPauseMs / 1000f)
+    }
+
+    private fun saveAudiobookSettings() {
+        preferences.edit()
+            .putBoolean("audiobook_mode", audiobookMode)
+            .putLong("sentence_pause_ms", sentencePauseMs)
+            .putLong("speaker_pause_ms", speakerPauseMs)
+            .putLong("paragraph_pause_ms", paragraphPauseMs)
+            .putLong("dramatic_pause_ms", dramaticPauseMs)
+            .apply()
     }
 
     private fun simpleListener(onProgress: (Int) -> Unit) = object : SeekBar.OnSeekBarChangeListener {
@@ -257,7 +320,19 @@ class MainActivity : Activity() {
     }
 
     private fun createTts(modelDir: String, modelName: String): OfflineTts {
-        val config = getOfflineTtsConfig(modelDir = modelDir, modelName = modelName, acousticModelName = "", vocoder = "", voices = "", lexicon = "", dataDir = "$modelDir/espeak-ng-data", dictDir = "", ruleFsts = "", ruleFars = "", numThreads = 2)
+        val config = getOfflineTtsConfig(
+            modelDir = modelDir,
+            modelName = modelName,
+            acousticModelName = "",
+            vocoder = "",
+            voices = "",
+            lexicon = "",
+            dataDir = "$modelDir/espeak-ng-data",
+            dictDir = "",
+            ruleFsts = "",
+            ruleFars = "",
+            numThreads = 2
+        )
         return OfflineTts(config = config)
     }
 
@@ -265,22 +340,29 @@ class MainActivity : Activity() {
         val result = mutableListOf<DialogueLine>()
         var currentSpeaker: String? = null
         val currentText = StringBuilder()
-        fun flush() {
+        var paragraphBreakPending = false
+
+        fun flush(paragraphBreakAfter: Boolean = false) {
             val value = currentText.toString().trim()
-            if (value.isNotEmpty()) result += DialogueLine(currentSpeaker ?: "Narrator", cleanText(value))
+            if (value.isNotEmpty()) result += DialogueLine(currentSpeaker ?: "Narrator", cleanText(value), paragraphBreakAfter)
             currentText.clear()
         }
+
         for (rawLine in input.lines()) {
             val line = rawLine.trim()
             if (line.isEmpty()) {
-                flush()
-                currentSpeaker = null
+                if (currentText.isNotEmpty()) {
+                    flush(paragraphBreakAfter = true)
+                    currentSpeaker = null
+                    paragraphBreakPending = true
+                }
                 continue
             }
             val match = Regex("^([A-Za-z0-9•._ -]{1,40}):\\s*(.*)$").matchEntire(line)
             if (match != null) {
                 flush()
                 currentSpeaker = match.groupValues[1].trim()
+                paragraphBreakPending = false
                 currentText.append(match.groupValues[2])
             } else {
                 if (currentText.isNotEmpty()) currentText.append(' ')
@@ -293,6 +375,18 @@ class MainActivity : Activity() {
 
     private fun cleanText(value: String): String = value.trim().removeSurrounding("\"").removeSurrounding("“", "”")
 
+    private fun calculatePauseAfter(index: Int, line: DialogueLine, dialogue: List<DialogueLine>): Long {
+        if (!audiobookMode || index == dialogue.lastIndex) return 0L
+        val next = dialogue[index + 1]
+        val text = line.text.trim()
+        val speakerChanged = line.speaker.trim() != next.speaker.trim()
+        if (line.paragraphBreakAfter) return paragraphPauseMs
+        if (text.contains("...") || text.contains("…")) return maxOf(dramaticPauseMs, if (speakerChanged) speakerPauseMs else 0L)
+        if (speakerChanged) return speakerPauseMs
+        if (text.endsWith(".") || text.endsWith("!") || text.endsWith("?") || text.endsWith(":") || text.endsWith(";")) return sentencePauseMs
+        return 0L
+    }
+
     private fun speak() {
         if (!::narratorTts.isInitialized || !::alexTts.isInitialized || !::ciroTts.isInitialized) return
         val input = text.text.toString().trim()
@@ -301,6 +395,7 @@ class MainActivity : Activity() {
         audioQueue.clear()
         queueIndex = 0
         clearTimeline()
+        saveAudiobookSettings()
         val dialogue = parseDialogue(input)
         if (dialogue.isEmpty()) return
         val speakers = dialogue.map { it.speaker }.distinct()
@@ -314,8 +409,9 @@ class MainActivity : Activity() {
                     val file = File(filesDir, "dialogue_${index}_${System.nanoTime()}.wav")
                     audio.save(file.absolutePath)
                     val duration = getAudioDuration(file)
+                    val pauseAfter = calculatePauseAfter(index, line, dialogue)
                     synchronized(audioQueue) {
-                        audioQueue += AudioItem(file, settingsForSpeaker(line.speaker), line.speaker, line.text, duration)
+                        audioQueue += AudioItem(file, settingsForSpeaker(line.speaker), line.speaker, line.text, duration, pauseAfter)
                     }
                 }
                 runOnUiThread {
@@ -349,20 +445,16 @@ class MainActivity : Activity() {
             timelineStatus.text = "Noch keine Szene analysiert."
             return
         }
-
         var elapsed = 0L
         items.forEachIndexed { index, item ->
             val start = elapsed
             elapsed += item.durationMs
-            val end = elapsed
-
+            val audioEnd = elapsed
+            elapsed += item.pauseAfterMs
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(18, 14, 18, 14)
-                background = GradientDrawable().apply {
-                    cornerRadius = 18f
-                    setStroke(1, 0xFFCCCCCC.toInt())
-                }
+                background = GradientDrawable().apply { cornerRadius = 18f; setStroke(1, 0xFFCCCCCC.toInt()) }
                 isClickable = true
                 isFocusable = true
                 setOnClickListener { replayTimelineItem(index) }
@@ -370,44 +462,26 @@ class MainActivity : Activity() {
             val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             params.setMargins(0, 0, 0, 10)
             card.layoutParams = params
-
-            val header = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-            }
-            val time = TextView(this).apply {
-                text = formatTime(start)
-                textSize = 13f
-            }
-            val speaker = TextView(this).apply {
-                text = "  ${item.speaker}"
-                textSize = 17f
-                setTypeface(typeface, Typeface.BOLD)
-            }
-            header.addView(time)
-            header.addView(speaker)
-
+            val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+            val time = TextView(this).apply { text = formatTime(start); textSize = 13f }
+            val speaker = TextView(this).apply { text = "  ${item.speaker}"; textSize = 17f; setTypeface(typeface, Typeface.BOLD) }
+            header.addView(time); header.addView(speaker)
             val preview = TextView(this).apply {
                 text = if (item.text.length > 110) item.text.take(110).trimEnd() + "…" else item.text
                 textSize = 15f
                 setPadding(0, 8, 0, 4)
             }
-            val meta = TextView(this).apply {
-                text = "${formatTime(start)} – ${formatTime(end)} • Tippen zum Wiederholen"
-                textSize = 12f
-            }
-
-            card.addView(header)
-            card.addView(preview)
-            card.addView(meta)
+            val pauseLabel = if (item.pauseAfterMs > 0L) " • Pause ${formatSeconds(item.pauseAfterMs)}" else ""
+            val meta = TextView(this).apply { text = "${formatTime(start)} – ${formatTime(audioEnd)}$pauseLabel • Tippen zum Wiederholen"; textSize = 12f }
+            card.addView(header); card.addView(preview); card.addView(meta)
             timelineContainer.addView(card)
         }
-
-        timelineStatus.text = "${items.size} Abschnitte • ${items.map { it.speaker }.distinct().size} Sprecher • ${formatTime(elapsed)}"
+        timelineStatus.text = "${items.size} Abschnitte • ${items.map { it.speaker }.distinct().size} Sprecher • ${formatTime(elapsed)} • Pausen ${if (audiobookMode) "aktiv" else "aus"}"
     }
 
     private fun replayTimelineItem(index: Int) {
         val item = synchronized(audioQueue) { audioQueue.getOrNull(index) } ?: return
+        mainHandler.removeCallbacksAndMessages(null)
         player?.stop()
         player?.release()
         player = null
@@ -428,7 +502,10 @@ class MainActivity : Activity() {
                     status.text = "Ready • Timeline-Abschnitt wiedergegeben"
                 } else {
                     queueIndex = index + 1
-                    playNext()
+                    if (item.pauseAfterMs > 0L) {
+                        status.text = "Pause • ${item.speaker}"
+                        mainHandler.postDelayed({ playNext() }, item.pauseAfterMs)
+                    } else playNext()
                 }
             }
             start()
@@ -447,9 +524,7 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     player?.release()
                     player = MediaPlayer().apply {
-                        setDataSource(file.absolutePath)
-                        prepare()
-                        setVolume(volume, volume)
+                        setDataSource(file.absolutePath); prepare(); setVolume(volume, volume)
                         setPlaybackParams(PlaybackParams().setSpeed(speed).setPitch(pitch))
                         setOnCompletionListener { it.release(); player = null; status.text = "Ready • 3 local voices • English • Offline" }
                         start()
@@ -472,6 +547,7 @@ class MainActivity : Activity() {
     }
 
     private fun stop() {
+        mainHandler.removeCallbacksAndMessages(null)
         player?.stop()
         player?.release()
         player = null
@@ -486,10 +562,10 @@ class MainActivity : Activity() {
 
     private fun formatTime(ms: Long): String {
         val totalSeconds = (ms / 1000L).coerceAtLeast(0L)
-        val minutes = totalSeconds / 60L
-        val seconds = totalSeconds % 60L
-        return String.format(Locale.US, "%02d:%02d", minutes, seconds)
+        return String.format(Locale.US, "%02d:%02d", totalSeconds / 60L, totalSeconds % 60L)
     }
+
+    private fun formatSeconds(ms: Long): String = String.format(Locale.US, "%.2fs", ms / 1000f)
 
     private fun copyAssetFolder(path: String): String {
         val destination = File(filesDir, path)
@@ -507,15 +583,14 @@ class MainActivity : Activity() {
                 if (!childDestination.exists()) childDestination.mkdirs()
                 copyAssetContents(childPath, childDestination)
             } else if (!childDestination.exists()) {
-                assets.open(childPath).use { input ->
-                    childDestination.outputStream().use { output -> input.copyTo(output) }
-                }
+                assets.open(childPath).use { input -> childDestination.outputStream().use { output -> input.copyTo(output) } }
             }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        mainHandler.removeCallbacksAndMessages(null)
         player?.release()
         player = null
         if (::narratorTts.isInitialized) narratorTts.release()
