@@ -4,9 +4,11 @@ import android.app.Activity
 import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.os.Bundle
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.SeekBar
+import android.widget.Spinner
 import android.widget.TextView
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.getOfflineTtsConfig
@@ -25,15 +27,23 @@ class MainActivity : Activity() {
     private lateinit var speedBar: SeekBar
     private lateinit var pitchBar: SeekBar
     private lateinit var volumeBar: SeekBar
+    private lateinit var profileSpinner: Spinner
+    private lateinit var saveProfileButton: Button
     private var player: MediaPlayer? = null
     private val executor = Executors.newSingleThreadExecutor()
-    private val audioQueue = mutableListOf<File>()
+    private val audioQueue = mutableListOf<AudioItem>()
     private var queueIndex = 0
     private var speed = 1.0f
     private var pitch = 1.0f
     private var volume = 1.0f
+    private var selectedProfile = "Narrator"
+
+    private val profileNames = listOf("Narrator", "Alex", "Ciro")
+    private val preferences by lazy { getSharedPreferences("voice_profiles", MODE_PRIVATE) }
 
     data class DialogueLine(val speaker: String, val text: String)
+    data class VoiceSettings(val speed: Float, val pitch: Float, val volume: Float)
+    data class AudioItem(val file: File, val settings: VoiceSettings, val speaker: String)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,7 +56,10 @@ class MainActivity : Activity() {
         speedValue = findViewById(R.id.speedValue)
         pitchValue = findViewById(R.id.pitchValue)
         volumeValue = findViewById(R.id.volumeValue)
+        profileSpinner = findViewById(R.id.profileSpinner)
+        saveProfileButton = findViewById(R.id.saveProfileButton)
 
+        setupProfiles()
         setupControls()
 
         try {
@@ -65,6 +78,22 @@ class MainActivity : Activity() {
 
         findViewById<Button>(R.id.speakButton).setOnClickListener { speak() }
         findViewById<Button>(R.id.stopButton).setOnClickListener { stop() }
+        saveProfileButton.setOnClickListener { saveCurrentProfile() }
+    }
+
+    private fun setupProfiles() {
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, profileNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        profileSpinner.adapter = adapter
+        profileSpinner.setSelection(0)
+        profileSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                selectedProfile = profileNames[position]
+                loadProfile(selectedProfile)
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+        }
     }
 
     private fun setupControls() {
@@ -100,6 +129,43 @@ class MainActivity : Activity() {
         speedValue.text = String.format("%.2fx", speed)
         pitchValue.text = String.format("%.2fx", pitch)
         volumeValue.text = "${(volume * 100).toInt()}%"
+    }
+
+    private fun profileKey(profile: String) = profile.lowercase().replace(" ", "_")
+
+    private fun loadProfile(profile: String) {
+        val key = profileKey(profile)
+        speed = preferences.getFloat("${key}_speed", 1.0f)
+        pitch = preferences.getFloat("${key}_pitch", 1.0f)
+        volume = preferences.getFloat("${key}_volume", 1.0f)
+        speedBar.progress = ((speed - 0.75f) * 100f).toInt().coerceIn(0, 100)
+        pitchBar.progress = ((pitch - 0.75f) * 100f).toInt().coerceIn(0, 100)
+        volumeBar.progress = (volume * 100f).toInt().coerceIn(0, 100)
+        updateControlLabels()
+    }
+
+    private fun saveCurrentProfile() {
+        val key = profileKey(selectedProfile)
+        preferences.edit()
+            .putFloat("${key}_speed", speed)
+            .putFloat("${key}_pitch", pitch)
+            .putFloat("${key}_volume", volume)
+            .apply()
+        status.text = "Saved • $selectedProfile profile"
+    }
+
+    private fun settingsForSpeaker(speaker: String): VoiceSettings {
+        val profile = when (speaker.trim().lowercase()) {
+            "alex", "ethyalexia", "ethyalexia eztliquies" -> "Alex"
+            "ciro", "cyrus", "cyrus d'amantino", "cyrus d’amantino" -> "Ciro"
+            else -> "Narrator"
+        }
+        val key = profileKey(profile)
+        return VoiceSettings(
+            speed = preferences.getFloat("${key}_speed", 1.0f),
+            pitch = preferences.getFloat("${key}_pitch", 1.0f),
+            volume = preferences.getFloat("${key}_volume", 1.0f)
+        )
     }
 
     private fun createTts(modelDir: String, modelName: String): OfflineTts {
@@ -161,7 +227,7 @@ class MainActivity : Activity() {
     private fun voiceForSpeaker(speaker: String): OfflineTts {
         return when (speaker.trim().lowercase()) {
             "alex", "ethyalexia", "ethyalexia eztliquies" -> alexTts
-            "ciro", "cyrus", "cyrus d'amantino", "cyrus d’amantino" -> ciroTts
+            "ciro", "cyrus", "cyrus d'amantino", "cyrus d’ amantino" -> ciroTts
             else -> narratorTts
         }
     }
@@ -192,7 +258,8 @@ class MainActivity : Activity() {
                     val audio = selectedVoice.generate(line.text, sid = 0, speed = 1.0f)
                     val file = File(filesDir, "dialogue_${index}_${System.nanoTime()}.wav")
                     audio.save(file.absolutePath)
-                    synchronized(audioQueue) { audioQueue += file }
+                    val settings = settingsForSpeaker(line.speaker)
+                    synchronized(audioQueue) { audioQueue += AudioItem(file, settings, line.speaker) }
                 }
 
                 runOnUiThread {
@@ -208,21 +275,25 @@ class MainActivity : Activity() {
     }
 
     private fun playNext() {
-        val file = synchronized(audioQueue) {
+        val item = synchronized(audioQueue) {
             if (queueIndex < audioQueue.size) audioQueue[queueIndex] else null
         }
 
-        if (file == null) {
+        if (item == null) {
             status.text = "Ready • 3 local voices • English • Offline"
             return
         }
 
         player?.release()
         player = MediaPlayer().apply {
-            setDataSource(file.absolutePath)
+            setDataSource(item.file.absolutePath)
             prepare()
-            setVolume(volume, volume)
-            setPlaybackParams(PlaybackParams().setSpeed(speed).setPitch(pitch))
+            setVolume(item.settings.volume, item.settings.volume)
+            setPlaybackParams(
+                PlaybackParams()
+                    .setSpeed(item.settings.speed)
+                    .setPitch(item.settings.pitch)
+            )
             setOnCompletionListener {
                 queueIndex++
                 it.release()
