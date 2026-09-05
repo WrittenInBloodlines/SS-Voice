@@ -132,6 +132,91 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
+            android:text="Hörspiel-Modus"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Automatische Pausen" />
+            <Switch
+                android:id="@+id/audiobookModeSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Satzpause" />
+            <TextView android:id="@+id/sentencePauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.30s" />
+        </LinearLayout>
+        <SeekBar
+            android:id="@+id/sentencePauseBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="30" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Sprecherwechsel" />
+            <TextView android:id="@+id/speakerPauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.50s" />
+        </LinearLayout>
+        <SeekBar
+            android:id="@+id/speakerPauseBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="50" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Absatzpause" />
+            <TextView android:id="@+id/paragraphPauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.00s" />
+        </LinearLayout>
+        <SeekBar
+            android:id="@+id/paragraphPauseBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="200"
+            android:progress="100" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Dramatische Pause (...)" />
+            <TextView android:id="@+id/dramaticPauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.50s" />
+        </LinearLayout>
+        <SeekBar
+            android:id="@+id/dramaticPauseBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="300"
+            android:progress="150" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
             android:text="Speaker Timeline"
             android:textSize="20sp"
             android:textStyle="bold" />
