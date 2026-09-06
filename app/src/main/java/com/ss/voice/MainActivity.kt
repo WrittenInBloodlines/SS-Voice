@@ -581,7 +581,7 @@ class MainActivity : Activity() {
         }
         val titleInput = EditText(this).apply {
             hint = "Szenenname"
-            singleLine = true
+            setSingleLine(true)
         }
         val descriptionInput = EditText(this).apply {
             hint = "Beschreibung (optional)"
@@ -742,7 +742,7 @@ class MainActivity : Activity() {
         profileSpinner.setSelection(position)
         loadProfile(profileNames[position])
         clearTimeline()
-        status.text = "Scene loaded • ${scene.optString("title", "Unbenannte Szene")}"
+        status.text = "Scene loaded • ${scene.optString("title", "Unbenannte Szene")}" 
     }
 
     private fun applyAudiobookUi() {
