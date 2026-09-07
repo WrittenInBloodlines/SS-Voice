@@ -27,9 +27,14 @@
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Wähle einen Charakter und bearbeite seine Stimmeinstellungen." />
         <Spinner android:id="@+id/profileSpinner" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Voice Library" android:textSize="20sp" android:textStyle="bold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Voice Library • Phase 10" android:textSize="20sp" android:textStyle="bold" />
         <TextView android:id="@+id/voiceLibraryStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="3 Stimmen installiert • Offline verfügbar" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Metadaten zeigen Modellgröße, Sprache, Lizenz-Hinweis, Stimmtyp und Stil. Testen ist vor der Zuordnung möglich." />
         <LinearLayout android:id="@+id/voiceLibraryContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="vertical" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Installierte Stimmen" android:textSize="16sp" android:textStyle="bold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Ryan\n• Sprache: English (en-US)\n• Modellgröße: Medium\n• Stimmtyp: männlich\n• Stil: klar, ruhig, erwachsen\n• Lizenz: siehe mitgelieferte Modell-Metadaten\n• Offline: vollständig lokal\n\nLessac\n• Sprache: English (en-US)\n• Modellgröße: Medium\n• Stimmtyp: weiblich\n• Stil: warm, weich, erwachsen\n• Lizenz: siehe mitgelieferte Modell-Metadaten\n• Offline: vollständig lokal\n\nAmy\n• Sprache: English (en-US)\n• Modellgröße: Medium\n• Stimmtyp: weiblich\n• Stil: weich, natürlich, erwachsen\n• Lizenz: siehe mitgelieferte Modell-Metadaten\n• Offline: vollständig lokal" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Hinweis: Die Lizenzanzeige verwendet bewusst keinen geratenen Lizenznamen. Maßgeblich sind die Lizenz- und Metadaten des jeweiligen Modellpakets." android:textSize="12sp" />
         <Button android:id="@+id/saveProfileButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Profil speichern" />
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Voice Controls" android:textSize="20sp" android:textStyle="bold" />
