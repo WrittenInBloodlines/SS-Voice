@@ -341,6 +341,29 @@ class MainActivity : Activity() {
     private fun saveScenes(scenes: JSONArray) { scenePreferences.edit().putString("scene_data", scenes.toString()).apply() }
     private fun getScenesUsingVoice(key: String): List<String> { val result = mutableListOf<String>(); val scenes = getScenes(); for (i in 0 until scenes.length()) { val s = scenes.optJSONObject(i) ?: continue; val profiles = s.optJSONArray("profiles") ?: continue; for (j in 0 until profiles.length()) if (profiles.optJSONObject(j)?.optString("voice", "") == key) { result += s.optString("title", "Unbenannte Szene"); break } }; return result }
 
+    private fun setupScenes() {
+        refreshSceneList()
+    }
+
+    private fun getScenesUsingVoice(voiceKey: String): List<String> {
+        val result = mutableListOf<String>()
+        val scenes = getScenes()
+        for (i in 0 until scenes.length()) {
+            val scene = scenes.optJSONObject(i) ?: continue
+            val profiles = scene.optJSONArray("profiles") ?: continue
+            var usesVoice = false
+            for (j in 0 until profiles.length()) {
+                val profile = profiles.optJSONObject(j) ?: continue
+                if (profile.optString("voice", "") == voiceKey) {
+                    usesVoice = true
+                    break
+                }
+            }
+            if (usesVoice) result += scene.optString("title", "Unbenannte Szene")
+        }
+        return result
+    }
+
     private fun refreshSceneList() { sceneContainer.removeAllViews(); val scenes = getScenes(); sceneStatus.text = "${scenes.length()} gespeicherte Szene(n)"; if (scenes.length() == 0) { sceneContainer.addView(TextView(this).apply { text = "Noch keine Szenen gespeichert."; setPadding(0, 8, 0, 8) }); return }; for (i in 0 until scenes.length()) { val s = scenes.optJSONObject(i) ?: continue; val id = s.optString("id", ""); val cached = sceneAudioFiles(id).size; val card = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(18, 14, 18, 14); background = GradientDrawable().apply { cornerRadius = 18f; setStroke(1, 0xFFCCCCCC.toInt()) } }; card.addView(TextView(this).apply { text = s.optString("title", "Unbenannte Szene"); textSize = 18f; setTypeface(typeface, Typeface.BOLD) }); card.addView(TextView(this).apply { text = if (s.optString("description").isBlank()) "Keine Beschreibung" else s.optString("description") }); card.addView(TextView(this).apply { text = "${s.optString("selected_profile", "Narrator")} • $cached gecachte Audio-Datei(en)"; textSize = 12f; setPadding(0, 5, 0, 5) }); val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }; val load = Button(this).apply { text = "Laden"; setOnClickListener { loadScene(i) } }; val dup = Button(this).apply { text = "Duplizieren"; setOnClickListener { duplicateScene(i) } }; val del = Button(this).apply { text = "Löschen"; setOnClickListener { confirmDeleteScene(i) } }; row.addView(load, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)); row.addView(dup, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)); row.addView(del, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)); card.addView(row); sceneContainer.addView(card) } }
 
     private fun loadScene(index: Int) { val scenes = getScenes(); val s = scenes.optJSONObject(index) ?: return; stop(); text.setText(s.optString("text", "")); s.optJSONArray("profiles")?.let { arr -> for (i in 0 until arr.length()) { val p = arr.optJSONObject(i) ?: continue; val n = p.optString("name", ""); if (!profileNames.contains(n)) continue; val k = profileKey(n); preferences.edit().putFloat("${k}_speed", p.optDouble("speed", 1.0).toFloat()).putFloat("${k}_pitch", p.optDouble("pitch", 1.0).toFloat()).putFloat("${k}_volume", p.optDouble("volume", 1.0).toFloat()).putString("${k}_voice", p.optString("voice", "")).apply() } }; audiobookMode = s.optBoolean("audiobook_mode", true); sentencePauseMs = s.optLong("sentence_pause_ms", 300L); speakerPauseMs = s.optLong("speaker_pause_ms", 500L); paragraphPauseMs = s.optLong("paragraph_pause_ms", 1000L); dramaticPauseMs = s.optLong("dramatic_pause_ms", 1500L); saveAudiobookSettings(); applyAudiobookUi(); val p = s.optString("selected_profile", "Narrator"); profileSpinner.setSelection(profileNames.indexOf(p).coerceAtLeast(0)); loadProfile(profileNames[profileNames.indexOf(p).coerceAtLeast(0)]); audioQueue.clear(); clearTimeline(); val files = sceneAudioFiles(s.optString("id", "")); if (files.isNotEmpty()) { val dialogue = parseDialogue(s.optString("text", "")); files.forEachIndexed { i, file -> val line = dialogue.getOrNull(i) ?: DialogueLine("Narrator", ""); val settings = settingsForSpeaker(line.speaker); audioQueue += AudioItem(file, settings, line.speaker, line.text, getAudioDuration(file), calculatePauseAfter(i, line, dialogue)) }; buildTimeline(); status.text = "Scene geladen • gespeichertes Szenen-Audio verfügbar" } else status.text = "Scene geladen • neues Audio benötigt installierte Stimmen" }
