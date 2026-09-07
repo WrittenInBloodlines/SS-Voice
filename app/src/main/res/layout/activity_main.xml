@@ -23,275 +23,52 @@
             android:layout_marginTop="8dp"
             android:text="Starte TTS..." />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Character Voice Profiles"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Character Voice Profiles" android:textSize="20sp" android:textStyle="bold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Wähle einen Charakter und bearbeite seine Stimmeinstellungen." />
+        <Spinner android:id="@+id/profileSpinner" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="Wähle einen Charakter und bearbeite seine Stimmeinstellungen." />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Voice Library" android:textSize="20sp" android:textStyle="bold" />
+        <TextView android:id="@+id/voiceLibraryStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="3 Stimmen installiert • Offline verfügbar" />
+        <LinearLayout android:id="@+id/voiceLibraryContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="vertical" />
+        <Button android:id="@+id/saveProfileButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Profil speichern" />
 
-        <Spinner
-            android:id="@+id/profileSpinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Voice Controls" android:textSize="20sp" android:textStyle="bold" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal"><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Speed" /><TextView android:id="@+id/speedValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.00x" /></LinearLayout>
+        <SeekBar android:id="@+id/speedBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" android:progress="50" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal"><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Pitch" /><TextView android:id="@+id/pitchValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.00x" /></LinearLayout>
+        <SeekBar android:id="@+id/pitchBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" android:progress="50" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal"><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Volume" /><TextView android:id="@+id/volumeValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="100%" /></LinearLayout>
+        <SeekBar android:id="@+id/volumeBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" android:progress="100" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Voice Library"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Hörspiel-Modus" android:textSize="20sp" android:textStyle="bold" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal"><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Automatische Pausen" /><Switch android:id="@+id/audiobookModeSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" /></LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal"><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Satzpause" /><TextView android:id="@+id/sentencePauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.30s" /></LinearLayout>
+        <SeekBar android:id="@+id/sentencePauseBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" android:progress="30" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal"><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Sprecherwechsel" /><TextView android:id="@+id/speakerPauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.50s" /></LinearLayout>
+        <SeekBar android:id="@+id/speakerPauseBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" android:progress="50" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal"><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Absatzpause" /><TextView android:id="@+id/paragraphPauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.00s" /></LinearLayout>
+        <SeekBar android:id="@+id/paragraphPauseBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="2000" android:progress="1000" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal"><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Dramatische Pause (...)" /><TextView android:id="@+id/dramaticPauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.50s" /></LinearLayout>
+        <SeekBar android:id="@+id/dramaticPauseBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="3000" android:progress="1500" />
 
-        <TextView
-            android:id="@+id/voiceLibraryStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="3 Stimmen installiert • Offline verfügbar" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Scene System" android:textSize="20sp" android:textStyle="bold" />
+        <TextView android:id="@+id/sceneStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="0 gespeicherte Szene(n)" />
+        <Button android:id="@+id/saveSceneButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="＋ Szene speichern" />
+        <LinearLayout android:id="@+id/sceneContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="vertical" />
 
-        <LinearLayout
-            android:id="@+id/voiceLibraryContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="vertical" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Speaker Timeline" android:textSize="20sp" android:textStyle="bold" />
+        <TextView android:id="@+id/timelineStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Noch keine Szene analysiert." />
+        <LinearLayout android:id="@+id/timelineContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="vertical" />
 
-        <Button
-            android:id="@+id/saveProfileButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Profil speichern" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Audio Cache" android:textSize="20sp" android:textStyle="bold" />
+        <TextView android:id="@+id/cacheStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="0 Audio-Dateien • 0 B • lokal gespeichert" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Bereits erzeugtes Audio wird beim nächsten Abspielen wiederverwendet." />
+        <Button android:id="@+id/clearCacheButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Audio Cache löschen" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Voice Controls"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Speed" />
-            <TextView android:id="@+id/speedValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.00x" />
+        <EditText android:id="@+id/textInput" android:layout_width="match_parent" android:layout_height="280dp" android:layout_marginTop="20dp" android:gravity="top|start" android:hint="Text eingeben..." android:inputType="textMultiLine" android:minLines="8" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+            <Button android:id="@+id/speakButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="▶ Sprechen" />
+            <Button android:id="@+id/stopButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="■ Stop" />
         </LinearLayout>
-
-        <SeekBar
-            android:id="@+id/speedBar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:progress="50" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Pitch" />
-            <TextView android:id="@+id/pitchValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.00x" />
-        </LinearLayout>
-
-        <SeekBar
-            android:id="@+id/pitchBar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:progress="50" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Volume" />
-            <TextView android:id="@+id/volumeValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="100%" />
-        </LinearLayout>
-
-        <SeekBar
-            android:id="@+id/volumeBar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:progress="100" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Hörspiel-Modus"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Automatische Pausen" />
-            <Switch
-                android:id="@+id/audiobookModeSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Satzpause" />
-            <TextView android:id="@+id/sentencePauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.30s" />
-        </LinearLayout>
-        <SeekBar
-            android:id="@+id/sentencePauseBar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:progress="30" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Sprecherwechsel" />
-            <TextView android:id="@+id/speakerPauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.50s" />
-        </LinearLayout>
-        <SeekBar
-            android:id="@+id/speakerPauseBar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:progress="50" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Absatzpause" />
-            <TextView android:id="@+id/paragraphPauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.00s" />
-        </LinearLayout>
-        <SeekBar
-            android:id="@+id/paragraphPauseBar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="2000"
-            android:progress="1000" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Dramatische Pause (...)" />
-            <TextView android:id="@+id/dramaticPauseValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.50s" />
-        </LinearLayout>
-        <SeekBar
-            android:id="@+id/dramaticPauseBar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="3000"
-            android:progress="1500" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Scene System"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/sceneStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="0 gespeicherte Szene(n)" />
-
-        <Button
-            android:id="@+id/saveSceneButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="＋ Szene speichern" />
-
-        <LinearLayout
-            android:id="@+id/sceneContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="vertical" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Speaker Timeline"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/timelineStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="Noch keine Szene analysiert." />
-
-        <LinearLayout
-            android:id="@+id/timelineContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="vertical" />
-
-        <EditText
-            android:id="@+id/textInput"
-            android:layout_width="match_parent"
-            android:layout_height="280dp"
-            android:layout_marginTop="20dp"
-            android:gravity="top|start"
-            android:hint="Text eingeben..."
-            android:inputType="textMultiLine"
-            android:minLines="8" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
-            <Button
-                android:id="@+id/speakButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="▶ Sprechen" />
-            <Button
-                android:id="@+id/stopButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="■ Stop" />
-        </LinearLayout>
-
     </LinearLayout>
 </ScrollView>
