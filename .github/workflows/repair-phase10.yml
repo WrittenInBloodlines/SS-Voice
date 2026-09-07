@@ -1,0 +1,38 @@
+name: Repair Phase 10
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore missing scene methods
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path("app/src/main/java/com/ss/voice/MainActivity.kt")
+          s = p.read_text()
+          if "private fun setupScenes()" not in s:
+              marker = "    private fun refreshSceneList() {"
+              block = '''    private fun setupScenes() {\n        refreshSceneList()\n    }\n\n    private fun getScenesUsingVoice(voiceKey: String): List<String> {\n        val result = mutableListOf<String>()\n        val scenes = getScenes()\n        for (i in 0 until scenes.length()) {\n            val scene = scenes.optJSONObject(i) ?: continue\n            val profiles = scene.optJSONArray("profiles") ?: continue\n            var usesVoice = false\n            for (j in 0 until profiles.length()) {\n                val profile = profiles.optJSONObject(j) ?: continue\n                if (profile.optString("voice", "") == voiceKey) {\n                    usesVoice = true\n                    break\n                }\n            }\n            if (usesVoice) result += scene.optString("title", "Unbenannte Szene")\n        }\n        return result\n    }\n\n'''
+              if marker not in s:
+                  raise SystemExit("refreshSceneList marker not found")
+              s = s.replace(marker, block + marker, 1)
+              p.write_text(s)
+
+      - name: Commit repair and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/repair-phase10.yml
+          git add app/src/main/java/com/ss/voice/MainActivity.kt
+          git commit -m "fix: restore phase 8 scene setup for phase 10"
+          git push
