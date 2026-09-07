@@ -27,22 +27,6 @@ jobs:
             -o app/libs/sherpa-onnx-1.13.7.aar \
             https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.7/sherpa-onnx-1.13.7.aar
 
-      - name: Download Piper voices
-        run: |
-          mkdir -p app/src/main/assets
-          curl -L --fail --retry 3 \
-            -o /tmp/ryan.tar.bz2 \
-            https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.tar.bz2
-          curl -L --fail --retry 3 \
-            -o /tmp/lessac.tar.bz2 \
-            https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-medium.tar.bz2
-          curl -L --fail --retry 3 \
-            -o /tmp/amy.tar.bz2 \
-            https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-amy-medium.tar.bz2
-          tar -xjf /tmp/ryan.tar.bz2 -C app/src/main/assets
-          tar -xjf /tmp/lessac.tar.bz2 -C app/src/main/assets
-          tar -xjf /tmp/amy.tar.bz2 -C app/src/main/assets
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
