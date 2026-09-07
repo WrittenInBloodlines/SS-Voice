@@ -31,4 +31,5 @@ android {
 
 dependencies {
     implementation(files("libs/sherpa-onnx-1.13.7.aar"))
+    implementation("org.apache.commons:commons-compress:1.28.0")
 }
